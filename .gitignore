@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.session_tracker.json
+.DS_Store
+Thumbs.db

@@ -1,0 +1,22 @@
+{
+  "name": "antigravity-cognitive-guard",
+  "displayName": "Antigravity Cognitive Guard",
+  "version": "1.0.0",
+  "description": "Deterministic Level-1 operational safety and verification lifecycle guard for Google Antigravity agents.",
+  "category": "Developer Tools",
+  "author": {
+    "name": "Hyelcyon",
+    "url": "https://github.com/Hyelcyon"
+  },
+  "homepage": "https://github.com/Hyelcyon/antigravity-cognitive-guard",
+  "repository": "https://github.com/Hyelcyon/antigravity-cognitive-guard",
+  "license": "MIT",
+  "keywords": [
+    "antigravity",
+    "guardrails",
+    "hooks",
+    "safety",
+    "verification"
+  ],
+  "hooks": "./hooks.json"
+}
