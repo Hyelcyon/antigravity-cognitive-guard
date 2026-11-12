@@ -35,10 +35,36 @@ class TestGuardHooks(unittest.TestCase):
         self.assertEqual(output.get("decision"), "deny")
         self.assertIn("Root drive recursive deletion", output.get("reason", ""))
 
+    def test_pre_tool_guard_blocks_powershell_root_deletion(self):
+        payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": "Remove-Item -Recurse -Force C:\\"}}}
+        output = self.run_hook("pre_tool_guard.py", payload)
+        self.assertEqual(output.get("decision"), "deny")
+        self.assertIn("recursive deletion attempt", output.get("reason", ""))
+
+    def test_pre_tool_guard_blocks_system_directory_write(self):
+        payload = {"toolCall": {"name": "write_file", "args": {"Path": "C:\\Windows\\System32\\test.dll"}}}
+        output = self.run_hook("pre_tool_guard.py", payload)
+        self.assertEqual(output.get("decision"), "deny")
+        self.assertIn("File modification blocked", output.get("reason", ""))
+
     def test_pre_tool_guard_blocks_secret_dump(self):
         payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": "type .env"}}}
         output = self.run_hook("pre_tool_guard.py", payload)
         self.assertEqual(output.get("decision"), "deny")
+
+    def test_stop_gate_allows_doc_only_modification(self):
+        doc_file = PLUGIN_ROOT / "README.md"
+        edit_payload = {
+            "toolCall": {
+                "name": "write_file",
+                "args": {"Path": str(doc_file)}
+            }
+        }
+        self.run_hook("post_tool_verifier.py", edit_payload)
+
+        stop_payload = {"terminationReason": "NO_TOOL_CALL"}
+        res_stop = self.run_hook("stop_verification_gate.py", stop_payload)
+        self.assertEqual(res_stop.get("decision"), "allow")
 
     def test_verification_cycle_and_stop_gate(self):
         test_file = PLUGIN_ROOT / "hooks.json"

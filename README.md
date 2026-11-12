@@ -8,7 +8,10 @@ Deterministic Level-1 operational safety and verification lifecycle guard plugin
 
 **Antigravity Cognitive Guard** implements a lightweight, zero-latency Level-1 interception layer designed to:
 - **Prevent Catastrophic Operations**: Intercepts and blocks dangerous filesystem, disk, and secret-dump commands before execution (`PreToolUse`).
+- **Protect Critical System Paths**: Shields Windows (`C:\Windows`, `System32`), POSIX (`/etc`, `/bin`), and Git hook tampering from write and edit operations (`PreToolUse`).
+- **Immediate Syntax Validation**: Automatically verifies syntax for Python (`.py`), JSON (`.json`), and TOML (`.toml`) files immediately after modification (`PostToolUse`).
 - **Enforce Verification Invariants**: Tracks source and configuration modifications and requires actual verification commands (tests, builds, linters) before the agent can declare a task finished (`PostToolUse` and `Stop`).
+- **Smart Documentation Exemption**: Distinguishes between executable/configuration code changes and pure markdown/documentation edits, preventing unnecessary test gating on documentation tasks.
 - **Eliminate Runtime Slop & Invariant Duplication**: Avoids slow, synchronous prompt injection inside `PreInvocation`, deferring cognitive invariants to static rule files.
 
 ---
@@ -19,14 +22,16 @@ Deterministic Level-1 operational safety and verification lifecycle guard plugin
 [Agent Action Loop]
        │
        ├──► PreToolUse (pre_tool_guard.py)
-       │      └─ Blocks destructive operations (rmdir /s /q, format, secret dumps)
+       │      ├─ Blocks destructive commands (rmdir /s /q, format, secret dumps, forced push)
+       │      └─ Blocks write/edit access to protected system directories
        │
        ├──► PostToolUse (post_tool_verifier.py)
-       │      ├─ Immediate AST syntax checks on edited Python / JSON files
+       │      ├─ Immediate syntax checks on edited Python, JSON, and TOML files
        │      └─ Tracks modified files vs executed verification commands
        │
        └──► Stop (stop_verification_gate.py)
-              └─ Intercepts premature stops if files were modified without verification
+              ├─ Allows immediate completion if only documentation files were modified
+              └─ Intercepts premature stops if code/config files were modified without verification
 ```
 
 ---

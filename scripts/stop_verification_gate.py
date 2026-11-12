@@ -3,6 +3,7 @@
 
 Intercepts the agent when it attempts to finish execution without running tests or
 verification commands on newly written or edited source/configuration files.
+Exempts pure documentation and artifact edits from mandatory test gates.
 """
 
 import json
@@ -12,6 +13,12 @@ import sys
 
 STATE_DIR = Path(os.environ.get("PLUGIN_DATA", str(Path(__file__).resolve().parent)))
 STATE_FILE = STATE_DIR / ".session_tracker.json"
+
+CODE_CONFIG_EXTENSIONS = {
+    ".py", ".ts", ".js", ".tsx", ".jsx", ".rs", ".go", ".java",
+    ".cpp", ".c", ".h", ".cs", ".luau", ".lua", ".json", ".yaml",
+    ".yml", ".toml", ".sql", ".sh", ".ps1", ".bat"
+}
 
 
 def load_state() -> dict:
@@ -30,6 +37,10 @@ def save_state(state: dict) -> None:
         pass
 
 
+def filter_executable_modifications(files: list) -> list:
+    return [f for f in files if Path(f).suffix.lower() in CODE_CONFIG_EXTENSIONS]
+
+
 def main() -> None:
     try:
         raw_input = sys.stdin.read()
@@ -40,20 +51,21 @@ def main() -> None:
     termination_reason = payload.get("terminationReason", "")
     state = load_state()
 
-    has_unverified_modifications = (
-        bool(state.get("modified_files"))
+    code_modifications = filter_executable_modifications(state.get("modified_files", []))
+    has_unverified_code_modifications = (
+        bool(code_modifications)
         and not state.get("verified", True)
         and state.get("warnings_issued", 0) < 1
     )
 
-    if termination_reason == "NO_TOOL_CALL" and has_unverified_modifications:
+    if termination_reason == "NO_TOOL_CALL" and has_unverified_code_modifications:
         state["warnings_issued"] = state.get("warnings_issued", 0) + 1
         save_state(state)
-        modified_summary = ", ".join(Path(f).name for f in state["modified_files"][:3])
+        modified_summary = ", ".join(Path(f).name for f in code_modifications[:3])
         output = {
             "decision": "continue",
             "reason": (
-                f"[Autonomous Verification Gate] Files modified ({modified_summary}) without execution verification. "
+                f"[Autonomous Verification Gate] Code/config files modified ({modified_summary}) without execution verification. "
                 "Per workstation quality standards, you must execute test, build, or syntax verification commands "
                 "and confirm results before declaring the task complete."
             )

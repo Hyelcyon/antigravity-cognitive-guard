@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PostToolUse Syntax & Verification State Tracker for Antigravity Agent.
 
-Executes immediate syntax validation on modified files (Python, JSON) and tracks
+Executes immediate syntax validation on modified files (Python, JSON, TOML) and tracks
 whether verification commands have been executed during the current active session.
 """
 
@@ -12,6 +12,11 @@ import py_compile
 import re
 import sys
 
+try:
+    import tomllib
+except ImportError:
+    tomllib = None
+
 STATE_DIR = Path(os.environ.get("PLUGIN_DATA", str(Path(__file__).resolve().parent)))
 STATE_DIR.mkdir(parents=True, exist_ok=True)
 STATE_FILE = STATE_DIR / ".session_tracker.json"
@@ -21,12 +26,17 @@ VERIFICATION_COMMAND_PATTERNS = [
     r"\bpython\s+-m\s+unittest\b",
     r"\bpython\s+-m\s+py_compile\b",
     r"\b(pnpm|npm|yarn|bun)\s+(test|run\s+test|run\s+check)\b",
+    r"\b(vitest|playwright|cypress|jest)\b",
     r"\bcargo\s+(test|check|clippy)\b",
-    r"\bmvn\s+test\b",
+    r"\b(mvn|gradle)\s+test\b",
+    r"\bdotnet\s+test\b",
+    r"\b(ctest|make\s+test)\b",
     r"\bgo\s+test\b",
-    r"\b(tsc|ruff|eslint|biome)\b",
+    r"\b(selene|luau-analyze)\b",
+    r"\b(tsc|ruff|mypy|eslint|biome)\b",
     r"\baudit_skills\b",
     r"\bverify_\w+\b",
+    r"\bgit\s+(diff|status)\b",
 ]
 
 
@@ -64,6 +74,13 @@ def verify_file_syntax(file_path_str: str) -> bool:
         try:
             with p.open("r", encoding="utf-8") as f:
                 json.load(f)
+            return True
+        except Exception:
+            return False
+    elif ext == ".toml" and tomllib:
+        try:
+            with p.open("rb") as f:
+                tomllib.load(f)
             return True
         except Exception:
             return False
